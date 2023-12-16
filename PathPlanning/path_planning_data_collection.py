@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from rrt import RRT  # Your RRT implementation
 from a_star import AStarPlanner  # Your A* implementation
 
-DISPLAY = True
+DISPLAY = False
 COLLECT_DATA = True
 
 def generate_obstacles(grid_max_x, grid_max_y):
@@ -126,7 +126,7 @@ def save_paths(rrt_path, astar_path, sx, sy, ox, oy, gx, gy):
 
 
 def main():
-    num_environments = 1000  # Number of environments to generate
+    num_environments = 2000  # Number of environments to generate
     grid_max_x, grid_max_y = 100, 100  # Size of the grid area
     min_distance = 50.0  # Minimum distance between start and goal
     robot_radius = 1.0  # Robot radius for RRT
