@@ -1,8 +1,13 @@
+import os
+import csv
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 from rrt import RRT  # Your RRT implementation
 from a_star import AStarPlanner  # Your A* implementation
+
+DISPLAY = True
+COLLECT_DATA = True
 
 def generate_obstacles(grid_max_x, grid_max_y):
     ox, oy = [], []
@@ -57,15 +62,79 @@ def generate_random_point(min_value, max_value):
 def is_distance_sufficient(sx, sy, gx, gy, min_distance):
     return np.hypot(gx - sx, gy - sy) >= min_distance
 
+def save_grid_image(ox, oy, rrt_path, astar_path, sx, sy, gx, gy, pair_id):
+    plt.figure(figsize=(6, 6))
+    plt.plot(ox, oy, ".k", markersize=5)  # Obstacles
+    # if rrt_path:
+    #     plt.plot([x for (x, y) in rrt_path], [y for (x, y) in rrt_path], '-r', label='RRT Path')
+    # if astar_path:
+    #     plt.plot(astar_path[0], astar_path[1], '-b', label='A* Path')
+    plt.plot(sx, sy, "og", label='Start')
+    plt.plot(gx, gy, "xb", label='Goal')
+    # plt.legend()
+    # plt.grid(True)
+    plt.axis("equal")
+    plt.xlim(0, 100)
+    plt.ylim(0, 100)
+    # plt.title(f"Map and Paths for Pair ID {pair_id}")
+    # Save the figure
+    plt.savefig(f"map_images/map_{pair_id}.png")
+    plt.close()
+
+def save_paths(rrt_path, astar_path, sx, sy, ox, oy, gx, gy):
+
+    # Check for valid paths
+    if rrt_path and astar_path and len(astar_path[0]) > 1:
+        # Determine the next pair ID
+        pair_id = 1
+        csv_file_name = 'path_data.csv'
+        write_header = not os.path.exists(csv_file_name)
+        
+        if not write_header:
+            with open(csv_file_name, mode='r') as infile:
+                reader = csv.reader(infile)
+                existing_rows = list(reader)
+                if existing_rows:
+                    last_row = existing_rows[-1]
+                    pair_id = int(last_row[0]) + 1
+
+        with open(csv_file_name, mode='a', newline='') as file:
+            writer = csv.writer(file)
+
+            # Write header if file is new
+            if write_header:
+                writer.writerow(["pair_id", "algo", "x", "y"])
+
+            # Reverse RRT path if it starts with the goal
+            if rrt_path[0] != [sx, sy]:
+                rrt_path.reverse()
+
+            # Reverse A* path if it ends with the start
+            if astar_path[0][-1] == sx and astar_path[1][-1] == sy:
+                astar_path = (astar_path[0][::-1], astar_path[1][::-1])
+
+            # Write RRT paths
+            for point in rrt_path:
+                writer.writerow([pair_id, 'RRT', f"{point[0]:.2f}", f"{point[1]:.2f}"])
+
+            # Write A* paths
+            for x, y in zip(astar_path[0], astar_path[1]):
+                writer.writerow([pair_id, 'A*', f"{x:.2f}", f"{y:.2f}"])
+
+        save_grid_image(ox, oy, rrt_path, astar_path, sx, sy, gx, gy, pair_id)
+
 
 
 def main():
-    num_environments = 1  # Number of environments to generate
+    num_environments = 1000  # Number of environments to generate
     grid_max_x, grid_max_y = 100, 100  # Size of the grid area
     min_distance = 50.0  # Minimum distance between start and goal
     robot_radius = 1.0  # Robot radius for RRT
 
     for i in range(num_environments):
+
+        print(f"**Sample: {i}")
+
         ox, oy = generate_obstacles(grid_max_x, grid_max_y)
 
         # Generate random start and goal positions with minimum distance
@@ -74,10 +143,6 @@ def main():
             gx, gy = generate_random_point(1, grid_max_y - 1)
             if is_distance_sufficient(sx, sy, gx, gy, min_distance):
                 break
-
-
-        print(f"Start Goal: ({sx}, {sy})")
-        print(f"End Goal: ({gx}, {gy})")
 
         # RRT Planning
         start_time = time.time()
@@ -93,75 +158,42 @@ def main():
         end_time = time.time()
         rrt_planning_time = end_time - start_time
         
-        print(f"The rrt path: {rrt_path}")
-        print(f"The rrt planning time: {rrt_planning_time}")
-
+        # print(f"The rrt planning time: {rrt_planning_time}")
 
         # A* Planning
-        grid_size = .5  # Grid resolution
+        grid_size = 1.0  # Grid resolution
         start_time = time.time()
         a_star = AStarPlanner(ox, oy, grid_size, robot_radius)
         astar_path = a_star.planning(sx, sy, gx, gy)
         end_time = time.time()
         astar_planning_time = end_time - start_time
 
-        print(f"The A* path: {astar_path}")
-        print(f"The A* planning time: {astar_planning_time}")
+        # print(f"The A* planning time: {astar_planning_time}")
 
-        # Plotting
-        plt.figure()
-        plt.plot(ox, oy, ".k")
-        if rrt_path:
-            plt.plot([x for (x, y) in rrt_path], [y for (x, y) in rrt_path], '-r', label='RRT Path')
-        if astar_path:
-            plt.plot(astar_path[0], astar_path[1], '-b', label='A* Path')
-        plt.plot(sx, sy, "og", label='Start')
-        plt.plot(gx, gy, "xb", label='Goal')
-        plt.legend()
-        plt.grid(True)
-        plt.axis("equal")
-        plt.title(f"RRT vs A* - Environment {i+1}")
-        plt.pause(1)
+        if DISPLAY:
+            # Plotting
+            plt.figure()
+            plt.plot(ox, oy, ".k")
+            if rrt_path:
+                plt.plot([x for (x, y) in rrt_path], [y for (x, y) in rrt_path], '-r', label='RRT Path')
+            if astar_path:
+                plt.plot(astar_path[0], astar_path[1], '-b', label='A* Path')
+            plt.plot(sx, sy, "og", label='Start')
+            plt.plot(gx, gy, "xb", label='Goal')
+            plt.legend()
+            plt.grid(True)
+            plt.axis("equal")
+            plt.title(f"RRT vs A* - Environment {i+1}")
+            plt.pause(1)
+        
+        
+        if COLLECT_DATA:
+            save_paths(rrt_path, astar_path, sx, sy, ox, oy, gx, gy)
 
-    plt.show()
+
+    if DISPLAY:
+        plt.show()
 
 if __name__ == '__main__':
     main()
 
-# def main():
-#     num_environments = 5  # Number of different environments to generate
-#     grid_max_x, grid_max_y = 100, 100  # Size of the grid area
-#     robot_radius = 1.0  # [m]
-#     min_distance = 50.0  # Minimum distance between start and goal
-
-#     for i in range(num_environments):
-#         ox, oy = generate_obstacles(grid_max_x, grid_max_y)
-
-#         # Generate random start and goal positions with minimum distance
-#         while True:
-#             sx, sy = generate_random_point(1, grid_max_x - 1)
-#             gx, gy = generate_random_point(1, grid_max_y - 1)
-#             if (sx, sy) not in zip(ox, oy) and (gx, gy) not in zip(ox, oy) and is_distance_sufficient(sx, sy, gx, gy, min_distance):
-#                 break
-
-#         grid_size = 2.0  # Grid resolution
-#         a_star = AStarPlanner(ox, oy, grid_size, robot_radius)
-#         rx, ry = a_star.planning(sx, sy, gx, gy)
-
-#         if True:  # Set to 'False' to disable animation
-#             plt.figure()
-#             plt.plot(ox, oy, ".k")
-#             plt.plot(sx, sy, "og")
-#             plt.plot(gx, gy, "xb")
-#             plt.plot(rx, ry, "-r")
-#             plt.grid(True)
-#             plt.axis("equal")
-#             plt.title(f"Environment {i+1}")
-#             plt.pause(1)  # Pause to display each environment
-    
-#     plt.show()
-        
-#         # time.sleep(5)
-
-# if __name__ == '__main__':
-#     main()
