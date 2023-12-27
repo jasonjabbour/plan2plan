@@ -2,7 +2,7 @@
 
 ## Description
 
-The objective of `plan2plan` is building a GAN (Generative Adversarial Network) model capable of generating more optimal paths that closely resemble those produced by the A* algorithm when conditioned on an obstacle map and an initial RRT (Rapidly-exploring Random Tree) path.
+A GAN (Generative Adversarial Network) model for generating more optimal paths that closely resemble those produced by the A* algorithm when conditioned on a 2D obstacle map and an initial RRT (Rapidly-exploring Random Tree) path.
 
 ## Model Architecture
 
